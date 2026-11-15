@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b3158">
+  <title>DARYAEE ENTERPRISES - Billing</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand-mark">DE</div>
+  <div>
+    <h1>DARYAEE ENTERPRISES</h1>
+    <p>ELECTRICAL CONTRACTOR</p>
+    <p>Primary: 8795322256 &nbsp; | &nbsp; Secondary: 9696566701</p>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="section-head"><h2>Customer Details</h2><span class="tag">NEW BILL</span></div>
+    <div class="form-grid">
+      <label>Bill Number<input id="billNo" readonly></label>
+      <label>Bill Date<input id="billDate" type="date"></label>
+      <label>Customer Name<input id="customerName" placeholder="Enter customer name"></label>
+      <label>Mobile Number<input id="customerPhone" inputmode="tel" placeholder="Enter mobile number"></label>
+      <label class="wide">Customer Address<textarea id="customerAddress" rows="2" placeholder="Enter customer address"></textarea></label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><h2>Material Details</h2><button id="addRow" class="small-btn" type="button">+ Add Item</button></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>S.No.</th><th>Material Name</th><th>Quantity</th><th>Unit</th><th>Rate (₹)</th><th>Total Amount (₹)</th><th class="no-print">Remove</th></tr></thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+    </div>
+    <div class="grand-total"><span>Grand Total</span><strong id="grandTotal">₹0.00</strong></div>
+  </section>
+
+  <section class="panel actions">
+    <button id="saveBill" type="button">Save Bill</button>
+    <button id="printBill" class="secondary" type="button">Print / Save PDF</button>
+    <button id="shareBill" class="whatsapp" type="button">Share on WhatsApp</button>
+    <button id="newBill" class="light" type="button">New Bill</button>
+    <p id="status" role="status"></p>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><h2>Saved Bills</h2><button id="refreshHistory" class="small-btn secondary" type="button">Refresh</button></div>
+    <div id="history" class="history">No saved bills yet.</div>
+  </section>
+</main>
+<footer>Thank you for your business · DARYAEE ENTERPRISES</footer>
+<script src="app.js"></script>
+</body>
+</html>

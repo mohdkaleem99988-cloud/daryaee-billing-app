@@ -1,0 +1,9 @@
+{
+  "name": "DARYAEE ENTERPRISES Billing",
+  "short_name": "DARYAEE Bill",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f8f5",
+  "theme_color": "#0b3158",
+  "icons": []
+}
