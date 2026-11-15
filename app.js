@@ -1,9 +1,33 @@
-
 const $ = id => document.getElementById(id);
 
 const units = ["MTR","FIT","NO","PCS","SET","KG","BOX","ROLL"];
 let currentBillId = null;
 let pdfLibraryPromise = null;
+
+const DEFAULT_SETTINGS = {
+  businessName: "DARYAEE ENTERPRISES",
+  tagline: "ELECTRICAL CONTRACTOR",
+  primaryPhone: "8795322256",
+  secondaryPhone: "9696566701",
+  email: "mohdkaleem99988@gmail.com",
+  gstMode: "OFF",
+  gstRate: "18"
+};
+
+function getSettings(){
+  try{
+    return {
+      ...DEFAULT_SETTINGS,
+      ...JSON.parse(localStorage.getItem("daryaeeSettings")||"{}")
+    };
+  }catch{
+    return {...DEFAULT_SETTINGS};
+  }
+}
+
+function saveSettingsData(settings){
+  localStorage.setItem("daryaeeSettings",JSON.stringify(settings));
+}
 
 function today(){
   const d = new Date();
@@ -23,22 +47,83 @@ function money(n){
 }
 
 function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g,c=>({
+  return String(s??"").replace(/[&<>"']/g,c=>({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   }[c]));
 }
 
-function addRow(item={}){
-  const tr = document.createElement("tr");
-  const idx = $("itemsBody").children.length+1;
+/* BUSINESS SETTINGS */
 
-  const unitOptions = units.map(u =>
+function updateBusinessDisplay(){
+  const s=getSettings();
+
+  $("brandName").textContent=s.businessName;
+  $("brandTagline").textContent=s.tagline;
+  $("primaryPhoneDisplay").textContent=s.primaryPhone;
+  $("secondaryPhoneDisplay").textContent=s.secondaryPhone;
+  $("businessEmailDisplay").textContent=s.email;
+  $("footerBusinessName").textContent=s.businessName;
+
+  const emailLink=document.querySelector(".footer a");
+  if(emailLink){
+    emailLink.textContent=s.email;
+    emailLink.href="mailto:"+s.email;
+  }
+}
+
+function fillSettingsForm(){
+  const s=getSettings();
+
+  $("businessNameSetting").value=s.businessName;
+  $("businessTaglineSetting").value=s.tagline;
+  $("primaryPhoneSetting").value=s.primaryPhone;
+  $("secondaryPhoneSetting").value=s.secondaryPhone;
+  $("businessEmailSetting").value=s.email;
+  $("defaultGstModeSetting").value=s.gstMode;
+  $("defaultGstRateSetting").value=s.gstRate;
+}
+
+function openSettings(){
+  fillSettingsForm();
+  $("settingsPanel").hidden=false;
+  $("settingsPanel").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function closeSettings(){
+  $("settingsPanel").hidden=true;
+}
+
+function saveSettings(){
+  const settings={
+    businessName:$("businessNameSetting").value.trim()||DEFAULT_SETTINGS.businessName,
+    tagline:$("businessTaglineSetting").value.trim()||DEFAULT_SETTINGS.tagline,
+    primaryPhone:$("primaryPhoneSetting").value.trim(),
+    secondaryPhone:$("secondaryPhoneSetting").value.trim(),
+    email:$("businessEmailSetting").value.trim(),
+    gstMode:$("defaultGstModeSetting").value,
+    gstRate:$("defaultGstRateSetting").value
+  };
+
+  saveSettingsData(settings);
+  updateBusinessDisplay();
+
+  $("status").textContent="Business settings successfully saved.";
+  closeSettings();
+}
+
+/* ITEM ROWS */
+
+function addRow(item={}){
+  const tr=document.createElement("tr");
+  const idx=$("itemsBody").children.length+1;
+
+  const unitOptions=units.map(u=>
     `<option value="${u}" ${item.unit===u?"selected":""}>${u}</option>`
   ).join("");
 
-  const custom = item.unit&&!units.includes(item.unit);
+  const custom=item.unit&&!units.includes(item.unit);
 
-  tr.innerHTML = `
+  tr.innerHTML=`
     <td class="serial">${idx}</td>
     <td><input class="material" placeholder="Material name" value="${escapeHtml(item.name||"")}"></td>
     <td><input class="qty" type="number" min="0" step="any" placeholder="0" value="${item.qty??""}"></td>
@@ -58,12 +143,14 @@ function addRow(item={}){
 
   $("itemsBody").appendChild(tr);
 
-  tr.querySelectorAll(".qty,.rate").forEach(el=>el.addEventListener("input",calculate));
+  tr.querySelectorAll(".qty,.rate").forEach(el=>
+    el.addEventListener("input",calculate)
+  );
 
   tr.querySelector(".unit").addEventListener("change",e=>{
     const input=tr.querySelector(".custom-unit");
     input.style.display=e.target.value==="CUSTOM"?"block":"none";
-    if(e.target.value!=="CUSTOM") input.value="";
+    if(e.target.value!=="CUSTOM")input.value="";
   });
 
   tr.querySelector(".remove").addEventListener("click",()=>{
@@ -92,6 +179,8 @@ function rows(){
   }));
 }
 
+/* BILL CALCULATION */
+
 function getBillCalculation(subtotal){
   const gstMode=$("gstMode").value;
   const gstRateValue=$("gstRate").value;
@@ -101,7 +190,7 @@ function getBillCalculation(subtotal){
   const total=subtotal+gstAmount;
   const advancePaid=Math.max(0,Number($("advancePaid").value)||0);
 
-  return {
+  return{
     gstMode,gstRate,customGst,gstAmount,total,advancePaid,
     balanceDue:total-advancePaid
   };
@@ -113,6 +202,7 @@ function calculate(){
   [...$("itemsBody").children].forEach(tr=>{
     const amount=(Number(tr.querySelector(".qty").value)||0)*
       (Number(tr.querySelector(".rate").value)||0);
+
     tr.querySelector(".amount").textContent=money(amount);
     subtotal+=amount;
   });
@@ -123,14 +213,16 @@ function calculate(){
   $("gstAmount").textContent=money(bill.gstAmount);
   $("grandTotal").textContent=money(bill.total);
   $("balanceDue").textContent=money(bill.balanceDue);
-  $("customGstWrap").style.display=$("gstRate").value==="CUSTOM"?"block":"none";
+
+  $("customGstWrap").style.display=
+    $("gstRate").value==="CUSTOM"?"block":"none";
 }
 
 function collect(){
   const items=rows();
   const subtotal=items.reduce((s,x)=>s+x.qty*x.rate,0);
 
-  return {
+  return{
     id:currentBillId||String(Date.now()),
     billNo:$("billNo").value,
     billDate:$("billDate").value,
@@ -143,9 +235,14 @@ function collect(){
   };
 }
 
+/* LOCAL BILL STORAGE */
+
 function getHistory(){
-  try{return JSON.parse(localStorage.getItem("daryaeeBills")||"[]");}
-  catch{return [];}
+  try{
+    return JSON.parse(localStorage.getItem("daryaeeBills")||"[]");
+  }catch{
+    return [];
+  }
 }
 
 function save(){
@@ -159,7 +256,7 @@ function save(){
   const list=getHistory();
   const i=list.findIndex(x=>x.id===b.id);
 
-  if(i>=0) list[i]=b;
+  if(i>=0)list[i]=b;
   else list.unshift(b);
 
   localStorage.setItem("daryaeeBills",JSON.stringify(list));
@@ -167,6 +264,7 @@ function save(){
 
   $("status").textContent="Bill saved on this mobile.";
   renderHistory();
+
   return b;
 }
 
@@ -193,15 +291,18 @@ function loadBill(id){
   if(!b)return;
 
   currentBillId=b.id;
+
   $("billNo").value=b.billNo;
   $("billDate").value=b.billDate;
   $("customerName").value=b.customerName;
   $("customerPhone").value=b.customerPhone;
   $("customerAddress").value=b.customerAddress;
+
   $("gstMode").value=b.gstMode||"OFF";
   $("gstRate").value=b.gstRate
     ?([5,12,18,28].includes(Number(b.gstRate))?String(b.gstRate):"CUSTOM")
     :"18";
+
   $("customGst").value=b.customGst||0;
   $("advancePaid").value=b.advancePaid||0;
 
@@ -251,16 +352,22 @@ function loadJsPDF(){
   return pdfLibraryPromise;
 }
 
+/* PDF GENERATION */
+
 function createBillPDF(b){
   const doc=new window.jspdf.jsPDF({
     orientation:"portrait",unit:"mm",format:"a4"
   });
 
+  const settings=getSettings();
   const left=14,right=196;
   let y=18;
 
   function checkPage(height=10){
-    if(y+height>275){doc.addPage();y=20;}
+    if(y+height>275){
+      doc.addPage();
+      y=20;
+    }
   }
 
   function addText(t,x,yy,options={}){
@@ -270,17 +377,25 @@ function createBillPDF(b){
   doc.setTextColor(8,42,75);
   doc.setFont("helvetica","bold");
   doc.setFontSize(19);
-  addText("DARYAEE ENTERPRISES",left,y);
+  addText(settings.businessName,left,y);
 
   y+=8;
   doc.setFontSize(11);
-  addText("ELECTRICAL CONTRACTOR",left,y);
+  addText(settings.tagline,left,y);
 
   y+=7;
   doc.setTextColor(60,60,60);
   doc.setFont("helvetica","normal");
   doc.setFontSize(9);
-  addText("Primary: 8795322256 | Secondary: 9696566701",left,y);
+
+  addText(
+    "Primary: "+settings.primaryPhone+
+    " | Secondary: "+settings.secondaryPhone,
+    left,y
+  );
+
+  y+=5;
+  addText("Email: "+settings.email,left,y);
 
   y+=5;
   doc.setDrawColor(190,150,65);
@@ -303,7 +418,10 @@ function createBillPDF(b){
   addText("Customer: "+b.customerName,left,y);y+=6;
   addText("Mobile: "+(b.customerPhone||"-"),left,y);y+=6;
 
-  const addressLines=doc.splitTextToSize("Address: "+(b.customerAddress||"-"),180);
+  const addressLines=doc.splitTextToSize(
+    "Address: "+(b.customerAddress||"-"),180
+  );
+
   doc.text(addressLines,left,y);
   y+=addressLines.length*5+6;
 
@@ -330,6 +448,7 @@ function createBillPDF(b){
   (b.items||[]).forEach((item,index)=>{
     const lines=doc.splitTextToSize(String(item.name||"-"),78);
     const height=Math.max(7,lines.length*4.5);
+
     checkPage(height+5);
 
     addText(index+1,xNo,y);
@@ -337,7 +456,11 @@ function createBillPDF(b){
     addText(item.qty||0,xQty,y);
     addText(item.unit||"-",xUnit,y);
     addText(Number(item.rate||0).toFixed(2),xRate,y);
-    addText((Number(item.qty||0)*Number(item.rate||0)).toFixed(2),xAmount,y,{align:"right"});
+
+    addText(
+      (Number(item.qty||0)*Number(item.rate||0)).toFixed(2),
+      xAmount,y,{align:"right"}
+    );
 
     y+=height;
     doc.setDrawColor(220,220,220);
@@ -360,29 +483,40 @@ function createBillPDF(b){
 
   addText("Subtotal: INR "+subtotal.toFixed(2),right,y,{align:"right"});
   y+=7;
-  addText("GST ("+(b.gstMode==="ON"?b.gstRate+"%":"OFF")+"): INR "+gstAmount.toFixed(2),right,y,{align:"right"});
-  y+=9;
 
+  addText(
+    "GST ("+(b.gstMode==="ON"?b.gstRate+"%":"OFF")+
+    "): INR "+gstAmount.toFixed(2),
+    right,y,{align:"right"}
+  );
+
+  y+=9;
   doc.setFillColor(8,42,75);
   doc.rect(105,y-6,91,11,"F");
+
   doc.setTextColor(255,255,255);
   doc.setFont("helvetica","bold");
   doc.setFontSize(11);
+
   addText("GRAND TOTAL: INR "+total.toFixed(2),193,y+1,{align:"right"});
 
   y+=13;
   doc.setTextColor(50,50,50);
   doc.setFontSize(10);
+
   addText("Advance Paid: INR "+advance.toFixed(2),right,y,{align:"right"});
   y+=7;
+
   doc.setFont("helvetica","bold");
   addText("Balance Due: INR "+balance.toFixed(2),right,y,{align:"right"});
 
   y+=18;
   checkPage(10);
+
   doc.setFont("helvetica","normal");
   doc.setFontSize(9);
   doc.setTextColor(100,100,100);
+
   addText("Thank you for your business!",left,y);
 
   return doc;
@@ -395,13 +529,16 @@ function share(){
   if(!b)return;
 
   if(!window.jspdf){
-    $("status").textContent="PDF library load ho rahi hai. Thodi der baad Share dobara dabayein.";
+    $("status").textContent=
+      "PDF library load ho rahi hai. Thodi der baad Share dobara dabayein.";
 
     loadJsPDF().then(()=>{
-      $("status").textContent="PDF ready hai. Ab Share on WhatsApp dobara dabayein.";
+      $("status").textContent=
+        "PDF ready hai. Ab Share on WhatsApp dobara dabayein.";
     }).catch(()=>{
       $("status").textContent="PDF library load nahi hui. Internet check karein.";
     });
+
     return;
   }
 
@@ -426,43 +563,59 @@ function share(){
         }else{
           console.error(error);
           doc.save(fileName);
-          $("status").textContent="PDF download ho gayi. WhatsApp mein Document se attach karein.";
+          $("status").textContent=
+            "PDF download ho gayi. WhatsApp mein Document se attach karein.";
         }
       });
     }else{
       doc.save(fileName);
-      $("status").textContent="PDF download ho gayi. WhatsApp mein Document se attach karein.";
+      $("status").textContent=
+        "PDF download ho gayi. WhatsApp mein Document se attach karein.";
     }
   }catch(error){
     console.error(error);
-    $("status").textContent="PDF share nahi ho payi. Save PDF button se PDF download karein.";
+    $("status").textContent=
+      "PDF share nahi ho payi. Save PDF button se PDF download karein.";
   }
 }
 
+/* NEW BILL */
+
 function newBill(){
+  const settings=getSettings();
+
   currentBillId=null;
+
   $("billNo").value=makeBillNo();
   $("billDate").value=today();
   $("customerName").value="";
   $("customerPhone").value="";
   $("customerAddress").value="";
-  $("gstMode").value="OFF";
-  $("gstRate").value="18";
+
+  $("gstMode").value=settings.gstMode;
+  $("gstRate").value=settings.gstRate;
   $("customGst").value="0";
   $("advancePaid").value="0";
+
   $("itemsBody").innerHTML="";
   addRow();
   addRow();
+
   calculate();
   $("status").textContent="New bill ready.";
 }
 
 /* BUTTON EVENTS */
 
+$("settingsBtn").addEventListener("click",openSettings);
+$("closeSettings").addEventListener("click",closeSettings);
+$("saveSettings").addEventListener("click",saveSettings);
+
 $("gstMode").addEventListener("change",calculate);
 $("gstRate").addEventListener("change",calculate);
 $("customGst").addEventListener("input",calculate);
 $("advancePaid").addEventListener("input",calculate);
+
 $("addRow").addEventListener("click",()=>addRow());
 $("saveBill").addEventListener("click",save);
 
@@ -478,8 +631,11 @@ $("refreshHistory").addEventListener("click",renderHistory);
 
 /* START */
 
+updateBusinessDisplay();
+fillSettingsForm();
 newBill();
 renderHistory();
+
 loadJsPDF().catch(()=>{});
 
 if("serviceWorker" in navigator&&location.protocol.startsWith("http")){
