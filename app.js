@@ -16,7 +16,7 @@ function makeBillNo(){
 }
 
 function money(n){
-  return "₹" + Number(n || 0).toLocaleString("en-IN",{
+  return "₹" + Number(n||0).toLocaleString("en-IN",{
     minimumFractionDigits:2,
     maximumFractionDigits:2
   });
@@ -30,11 +30,13 @@ function escapeHtml(s){
 
 function addRow(item={}){
   const tr = document.createElement("tr");
-  const idx = $("itemsBody").children.length + 1;
+  const idx = $("itemsBody").children.length+1;
 
   const unitOptions = units.map(u =>
     `<option value="${u}" ${item.unit===u?"selected":""}>${u}</option>`
   ).join("");
+
+  const custom = item.unit&&!units.includes(item.unit);
 
   tr.innerHTML = `
     <td class="serial">${idx}</td>
@@ -43,11 +45,11 @@ function addRow(item={}){
     <td>
       <select class="unit">
         ${unitOptions}
-        <option value="CUSTOM" ${item.unit&&!units.includes(item.unit)?"selected":""}>Other / Type</option>
+        <option value="CUSTOM" ${custom?"selected":""}>Other / Type</option>
       </select>
       <input class="custom-unit" placeholder="Type unit"
-        value="${item.unit&&!units.includes(item.unit)?escapeHtml(item.unit):""}"
-        style="display:${item.unit&&!units.includes(item.unit)?"block":"none"};margin-top:5px">
+        value="${custom?escapeHtml(item.unit):""}"
+        style="display:${custom?"block":"none"};margin-top:5px">
     </td>
     <td><input class="rate" type="number" min="0" step="any" placeholder="0" value="${item.rate??""}"></td>
     <td class="amount">${money((Number(item.qty)||0)*(Number(item.rate)||0))}</td>
@@ -56,14 +58,12 @@ function addRow(item={}){
 
   $("itemsBody").appendChild(tr);
 
-  tr.querySelectorAll(".qty,.rate").forEach(el =>
-    el.addEventListener("input",calculate)
-  );
+  tr.querySelectorAll(".qty,.rate").forEach(el=>el.addEventListener("input",calculate));
 
   tr.querySelector(".unit").addEventListener("change",e=>{
-    const custom = tr.querySelector(".custom-unit");
-    custom.style.display = e.target.value==="CUSTOM"?"block":"none";
-    if(e.target.value!=="CUSTOM") custom.value="";
+    const input=tr.querySelector(".custom-unit");
+    input.style.display=e.target.value==="CUSTOM"?"block":"none";
+    if(e.target.value!=="CUSTOM") input.value="";
   });
 
   tr.querySelector(".remove").addEventListener("click",()=>{
@@ -77,7 +77,7 @@ function addRow(item={}){
 
 function renumber(){
   [...$("itemsBody").children].forEach((tr,i)=>{
-    tr.querySelector(".serial").textContent = i+1;
+    tr.querySelector(".serial").textContent=i+1;
   });
 }
 
@@ -93,59 +93,42 @@ function rows(){
 }
 
 function getBillCalculation(subtotal){
-  const gstMode = $("gstMode").value;
-  const gstRateValue = $("gstRate").value;
-  const customGst = Number($("customGst").value)||0;
-  const gstRate = gstRateValue==="CUSTOM"
-    ? customGst
-    : Number(gstRateValue);
-
-  const gstAmount = gstMode==="ON"
-    ? subtotal*gstRate/100
-    : 0;
-
-  const total = subtotal+gstAmount;
-  const advancePaid = Math.max(0,Number($("advancePaid").value)||0);
-  const balanceDue = total-advancePaid;
+  const gstMode=$("gstMode").value;
+  const gstRateValue=$("gstRate").value;
+  const customGst=Number($("customGst").value)||0;
+  const gstRate=gstRateValue==="CUSTOM"?customGst:Number(gstRateValue);
+  const gstAmount=gstMode==="ON"?subtotal*gstRate/100:0;
+  const total=subtotal+gstAmount;
+  const advancePaid=Math.max(0,Number($("advancePaid").value)||0);
 
   return {
-    gstMode,
-    gstRate,
-    customGst,
-    gstAmount,
-    total,
-    advancePaid,
-    balanceDue
+    gstMode,gstRate,customGst,gstAmount,total,advancePaid,
+    balanceDue:total-advancePaid
   };
 }
 
 function calculate(){
-  let subtotal = 0;
+  let subtotal=0;
 
   [...$("itemsBody").children].forEach(tr=>{
-    const amount =
-      (Number(tr.querySelector(".qty").value)||0) *
+    const amount=(Number(tr.querySelector(".qty").value)||0)*
       (Number(tr.querySelector(".rate").value)||0);
-
-    tr.querySelector(".amount").textContent = money(amount);
-    subtotal += amount;
+    tr.querySelector(".amount").textContent=money(amount);
+    subtotal+=amount;
   });
 
-  const bill = getBillCalculation(subtotal);
+  const bill=getBillCalculation(subtotal);
 
-  $("subTotal").textContent = money(subtotal);
-  $("gstAmount").textContent = money(bill.gstAmount);
-  $("grandTotal").textContent = money(bill.total);
-  $("balanceDue").textContent = money(bill.balanceDue);
-
-  $("customGstWrap").style.display =
-    $("gstRate").value==="CUSTOM" ? "block" : "none";
+  $("subTotal").textContent=money(subtotal);
+  $("gstAmount").textContent=money(bill.gstAmount);
+  $("grandTotal").textContent=money(bill.total);
+  $("balanceDue").textContent=money(bill.balanceDue);
+  $("customGstWrap").style.display=$("gstRate").value==="CUSTOM"?"block":"none";
 }
 
 function collect(){
-  const items = rows();
-  const subtotal = items.reduce((s,x)=>s+x.qty*x.rate,0);
-  const calculation = getBillCalculation(subtotal);
+  const items=rows();
+  const subtotal=items.reduce((s,x)=>s+x.qty*x.rate,0);
 
   return {
     id:currentBillId||String(Date.now()),
@@ -154,58 +137,51 @@ function collect(){
     customerName:$("customerName").value.trim(),
     customerPhone:$("customerPhone").value.trim(),
     customerAddress:$("customerAddress").value.trim(),
-    items,
-    subtotal,
-    ...calculation,
+    items,subtotal,
+    ...getBillCalculation(subtotal),
     savedAt:new Date().toISOString()
   };
 }
 
 function getHistory(){
-  try{
-    return JSON.parse(localStorage.getItem("daryaeeBills")||"[]");
-  }catch{
-    return [];
-  }
+  try{return JSON.parse(localStorage.getItem("daryaeeBills")||"[]");}
+  catch{return [];}
 }
 
 function save(){
-  const b = collect();
+  const b=collect();
 
   if(!b.customerName){
-    $("status").textContent = "Please enter customer name.";
+    $("status").textContent="Please enter customer name.";
     return null;
   }
 
-  const list = getHistory();
-  const i = list.findIndex(x=>x.id===b.id);
+  const list=getHistory();
+  const i=list.findIndex(x=>x.id===b.id);
 
   if(i>=0) list[i]=b;
   else list.unshift(b);
 
   localStorage.setItem("daryaeeBills",JSON.stringify(list));
-  currentBillId = b.id;
+  currentBillId=b.id;
 
-  $("status").textContent = "Bill saved on this mobile.";
+  $("status").textContent="Bill saved on this mobile.";
   renderHistory();
-
   return b;
 }
 
 function renderHistory(){
-  const list = getHistory();
+  const list=getHistory();
 
-  $("history").innerHTML = list.length
-    ? list.map(b=>`
-      <div class="history-item">
-        <div>
-          <b>${escapeHtml(b.billNo)}</b> · ${escapeHtml(b.customerName)}
-          <small>${escapeHtml(b.billDate||"")} · ${money(b.total)}</small>
-        </div>
-        <button type="button" data-id="${escapeHtml(b.id)}">Open</button>
+  $("history").innerHTML=list.length?list.map(b=>`
+    <div class="history-item">
+      <div>
+        <b>${escapeHtml(b.billNo)}</b> · ${escapeHtml(b.customerName)}
+        <small>${escapeHtml(b.billDate||"")} · ${money(b.total)}</small>
       </div>
-    `).join("")
-    : "No saved bills yet.";
+      <button type="button" data-id="${escapeHtml(b.id)}">Open</button>
+    </div>
+  `).join(""):"No saved bills yet.";
 
   $("history").querySelectorAll("button").forEach(btn=>{
     btn.addEventListener("click",()=>loadBill(btn.dataset.id));
@@ -213,168 +189,128 @@ function renderHistory(){
 }
 
 function loadBill(id){
-  const b = getHistory().find(x=>x.id===id);
-  if(!b) return;
+  const b=getHistory().find(x=>x.id===id);
+  if(!b)return;
 
-  currentBillId = b.id;
+  currentBillId=b.id;
+  $("billNo").value=b.billNo;
+  $("billDate").value=b.billDate;
+  $("customerName").value=b.customerName;
+  $("customerPhone").value=b.customerPhone;
+  $("customerAddress").value=b.customerAddress;
+  $("gstMode").value=b.gstMode||"OFF";
+  $("gstRate").value=b.gstRate
+    ?([5,12,18,28].includes(Number(b.gstRate))?String(b.gstRate):"CUSTOM")
+    :"18";
+  $("customGst").value=b.customGst||0;
+  $("advancePaid").value=b.advancePaid||0;
 
-  $("billNo").value = b.billNo;
-  $("billDate").value = b.billDate;
-  $("customerName").value = b.customerName;
-  $("customerPhone").value = b.customerPhone;
-  $("customerAddress").value = b.customerAddress;
-
-  $("gstMode").value = b.gstMode||"OFF";
-  $("gstRate").value = b.gstRate
-    ? ([5,12,18,28].includes(Number(b.gstRate))
-      ? String(b.gstRate)
-      : "CUSTOM")
-    : "18";
-
-  $("customGst").value = b.customGst||0;
-  $("advancePaid").value = b.advancePaid||0;
-
-  $("itemsBody").innerHTML = "";
+  $("itemsBody").innerHTML="";
   (b.items||[]).forEach(addRow);
-
-  if(!b.items?.length) addRow();
+  if(!b.items?.length)addRow();
 
   calculate();
-  $("status").textContent = "Saved bill opened.";
+  $("status").textContent="Saved bill opened.";
 }
 
-/* PDF LIBRARY LOAD */
+/* PDF LIBRARY WITH BACKUP SOURCE */
 
 function loadJsPDF(){
-  if(window.jspdf){
-    return Promise.resolve(window.jspdf);
-  }
+  if(window.jspdf)return Promise.resolve(window.jspdf);
+  if(pdfLibraryPromise)return pdfLibraryPromise;
 
-  if(pdfLibraryPromise){
-    return pdfLibraryPromise;
-  }
+  const sources=[
+    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js",
+    "https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"
+  ];
 
-  pdfLibraryPromise = new Promise((resolve,reject)=>{
-    const script = document.createElement("script");
+  pdfLibraryPromise=(async()=>{
+    for(const src of sources){
+      try{
+        await new Promise((resolve,reject)=>{
+          const script=document.createElement("script");
+          script.src=src;
+          script.onload=resolve;
+          script.onerror=()=>{
+            script.remove();
+            reject(new Error("Library load failed"));
+          };
+          document.head.appendChild(script);
+        });
 
-    script.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js";
-
-    script.onload = ()=>{
-      if(window.jspdf){
-        resolve(window.jspdf);
-      }else{
-        pdfLibraryPromise = null;
-        reject(new Error("PDF library load nahi hui"));
+        if(window.jspdf)return window.jspdf;
+      }catch(error){
+        console.warn("PDF source failed:",src);
       }
-    };
+    }
 
-    script.onerror = ()=>{
-      pdfLibraryPromise = null;
-      script.remove();
-      reject(new Error("Internet connection check karein"));
-    };
-
-    document.head.appendChild(script);
-  });
+    pdfLibraryPromise=null;
+    throw new Error("PDF library load nahi hui");
+  })();
 
   return pdfLibraryPromise;
 }
 
-/* CREATE BILL PDF */
-
 function createBillPDF(b){
-  const jsPDF = window.jspdf;
-
-  if(!jsPDF){
-    throw new Error("PDF library available nahi hai");
-  }
-
-  const doc = new jsPDF.jsPDF({
-    orientation:"portrait",
-    unit:"mm",
-    format:"a4"
+  const doc=new window.jspdf.jsPDF({
+    orientation:"portrait",unit:"mm",format:"a4"
   });
 
-  const left = 14;
-  const right = 196;
-  let y = 18;
+  const left=14,right=196;
+  let y=18;
 
   function checkPage(height=10){
-    if(y + height > 275){
-      doc.addPage();
-      y = 20;
-    }
+    if(y+height>275){doc.addPage();y=20;}
   }
 
-  function addText(text,x,yValue,options={}){
-    doc.text(String(text ?? "-"),x,yValue,options);
+  function addText(t,x,yy,options={}){
+    doc.text(String(t??"-"),x,yy,options);
   }
-
-  /* BUSINESS HEADER */
 
   doc.setTextColor(8,42,75);
   doc.setFont("helvetica","bold");
   doc.setFontSize(19);
   addText("DARYAEE ENTERPRISES",left,y);
 
-  y += 8;
+  y+=8;
   doc.setFontSize(11);
   addText("ELECTRICAL CONTRACTOR",left,y);
 
-  y += 7;
+  y+=7;
   doc.setTextColor(60,60,60);
   doc.setFont("helvetica","normal");
   doc.setFontSize(9);
-  addText("Primary: 8795322256  |  Secondary: 9696566701",left,y);
+  addText("Primary: 8795322256 | Secondary: 9696566701",left,y);
 
-  y += 5;
+  y+=5;
   doc.setDrawColor(190,150,65);
-  doc.setLineWidth(0.8);
+  doc.setLineWidth(.8);
   doc.line(left,y,right,y);
 
-  y += 10;
-
-  /* BILL DETAILS */
-
+  y+=10;
   doc.setTextColor(8,42,75);
   doc.setFont("helvetica","bold");
   doc.setFontSize(14);
   addText("BILL",left,y);
 
-  y += 9;
+  y+=9;
   doc.setTextColor(40,40,40);
   doc.setFont("helvetica","normal");
   doc.setFontSize(10);
 
-  addText("Bill Number: " + b.billNo,left,y);
-  y += 6;
-  addText("Bill Date: " + b.billDate,left,y);
-  y += 6;
-  addText("Customer: " + b.customerName,left,y);
-  y += 6;
-  addText("Mobile: " + (b.customerPhone||"-"),left,y);
-  y += 6;
+  addText("Bill Number: "+b.billNo,left,y);y+=6;
+  addText("Bill Date: "+b.billDate,left,y);y+=6;
+  addText("Customer: "+b.customerName,left,y);y+=6;
+  addText("Mobile: "+(b.customerPhone||"-"),left,y);y+=6;
 
-  const addressLines = doc.splitTextToSize(
-    "Address: " + (b.customerAddress||"-"),180
-  );
-
+  const addressLines=doc.splitTextToSize("Address: "+(b.customerAddress||"-"),180);
   doc.text(addressLines,left,y);
-  y += addressLines.length*5 + 6;
+  y+=addressLines.length*5+6;
 
-  /* MATERIAL TABLE */
-
-  const xNo = 14;
-  const xMaterial = 27;
-  const xQty = 112;
-  const xUnit = 130;
-  const xRate = 151;
-  const xAmount = 194;
+  const xNo=14,xMaterial=27,xQty=112,xUnit=130,xRate=151,xAmount=194;
 
   doc.setFillColor(8,42,75);
   doc.rect(left,y-5,182,9,"F");
-
   doc.setTextColor(255,255,255);
   doc.setFont("helvetica","bold");
   doc.setFontSize(8);
@@ -386,93 +322,64 @@ function createBillPDF(b){
   addText("Rate",xRate,y);
   addText("Amount",xAmount,y,{align:"right"});
 
-  y += 9;
-
+  y+=9;
   doc.setTextColor(40,40,40);
   doc.setFont("helvetica","normal");
   doc.setFontSize(8);
 
   (b.items||[]).forEach((item,index)=>{
-    const materialLines = doc.splitTextToSize(
-      String(item.name||"-"),78
-    );
+    const lines=doc.splitTextToSize(String(item.name||"-"),78);
+    const height=Math.max(7,lines.length*4.5);
+    checkPage(height+5);
 
-    const rowHeight = Math.max(7,materialLines.length*4.5);
-
-    checkPage(rowHeight+5);
-
-    addText(String(index+1),xNo,y);
-    doc.text(materialLines,xMaterial,y);
-    addText(String(item.qty||0),xQty,y);
-    addText(String(item.unit||"-"),xUnit,y);
+    addText(index+1,xNo,y);
+    doc.text(lines,xMaterial,y);
+    addText(item.qty||0,xQty,y);
+    addText(item.unit||"-",xUnit,y);
     addText(Number(item.rate||0).toFixed(2),xRate,y);
+    addText((Number(item.qty||0)*Number(item.rate||0)).toFixed(2),xAmount,y,{align:"right"});
 
-    addText(
-      (Number(item.qty||0)*Number(item.rate||0)).toFixed(2),
-      xAmount,y,{align:"right"}
-    );
-
-    y += rowHeight;
-
+    y+=height;
     doc.setDrawColor(220,220,220);
-    doc.setLineWidth(0.2);
     doc.line(left,y-2,right,y-2);
-
-    y += 3;
+    y+=3;
   });
 
-  /* TOTALS */
-
-  y += 5;
+  y+=5;
   checkPage(55);
 
-  const subtotal = Number(b.subtotal||0);
-  const gstAmount = Number(b.gstAmount||0);
-  const grandTotal = Number(b.total||0);
-  const advance = Number(b.advancePaid||0);
-  const balance = Number(b.balanceDue||0);
+  const subtotal=Number(b.subtotal||0);
+  const gstAmount=Number(b.gstAmount||0);
+  const total=Number(b.total||0);
+  const advance=Number(b.advancePaid||0);
+  const balance=Number(b.balanceDue||0);
 
   doc.setTextColor(50,50,50);
   doc.setFont("helvetica","normal");
   doc.setFontSize(10);
 
-  addText("Subtotal: INR " + subtotal.toFixed(2),right,y,{align:"right"});
-  y += 7;
-
-  addText(
-    "GST ("+(b.gstMode==="ON"?b.gstRate+"%":"OFF")+
-    "): INR "+gstAmount.toFixed(2),
-    right,y,{align:"right"}
-  );
-
-  y += 9;
+  addText("Subtotal: INR "+subtotal.toFixed(2),right,y,{align:"right"});
+  y+=7;
+  addText("GST ("+(b.gstMode==="ON"?b.gstRate+"%":"OFF")+"): INR "+gstAmount.toFixed(2),right,y,{align:"right"});
+  y+=9;
 
   doc.setFillColor(8,42,75);
   doc.rect(105,y-6,91,11,"F");
-
   doc.setTextColor(255,255,255);
   doc.setFont("helvetica","bold");
   doc.setFontSize(11);
+  addText("GRAND TOTAL: INR "+total.toFixed(2),193,y+1,{align:"right"});
 
-  addText(
-    "GRAND TOTAL: INR "+grandTotal.toFixed(2),
-    193,y+1,{align:"right"}
-  );
-
-  y += 13;
-
+  y+=13;
   doc.setTextColor(50,50,50);
   doc.setFontSize(10);
-
   addText("Advance Paid: INR "+advance.toFixed(2),right,y,{align:"right"});
-  y += 7;
-
+  y+=7;
   doc.setFont("helvetica","bold");
   addText("Balance Due: INR "+balance.toFixed(2),right,y,{align:"right"});
 
-  y += 18;
+  y+=18;
   checkPage(10);
-
   doc.setFont("helvetica","normal");
   doc.setFontSize(9);
   doc.setTextColor(100,100,100);
@@ -481,108 +388,73 @@ function createBillPDF(b){
   return doc;
 }
 
-/* WHATSAPP PDF SHARE */
+/* WHATSAPP SHARE */
 
 function share(){
-  const b = save();
-  if(!b) return;
-
-  /* Library ready nahi hai to pehle load karein */
+  const b=save();
+  if(!b)return;
 
   if(!window.jspdf){
-    $("status").textContent =
-      "PDF library load ho rahi hai. Thodi der baad Share dobara dabayein.";
+    $("status").textContent="PDF library load ho rahi hai. Thodi der baad Share dobara dabayein.";
 
-    loadJsPDF()
-      .then(()=>{
-        $("status").textContent =
-          "PDF ready hai. Ab WhatsApp Share dobara dabayein.";
-      })
-      .catch(()=>{
-        $("status").textContent =
-          "Internet slow hai. Internet check karke dobara try karein.";
-      });
-
+    loadJsPDF().then(()=>{
+      $("status").textContent="PDF ready hai. Ab Share on WhatsApp dobara dabayein.";
+    }).catch(()=>{
+      $("status").textContent="PDF library load nahi hui. Internet check karein.";
+    });
     return;
   }
 
   try{
-    $("status").textContent = "PDF ban rahi hai...";
+    const doc=createBillPDF(b);
+    const blob=doc.output("blob");
+    const fileName=(b.billNo||"DARYAEE-Bill")+".pdf";
+    const file=new File([blob],fileName,{type:"application/pdf"});
 
-    const doc = createBillPDF(b);
-    const blob = doc.output("blob");
-    const fileName = (b.billNo||"DARYAEE-Bill")+".pdf";
-
-    const file = new File([blob],fileName,{
-      type:"application/pdf"
-    });
-
-    /* ANDROID / CHROME FILE SHARE */
-
-    if(
-      navigator.share &&
-      navigator.canShare &&
-      navigator.canShare({files:[file]})
-    ){
-      $("status").textContent =
-        "Share menu khul raha hai. WhatsApp chunein.";
-
-      /* Important: share ko bina await ke direct call karein */
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      $("status").textContent="Share menu khul raha hai. WhatsApp chunein.";
 
       navigator.share({
         files:[file],
         title:"DARYAEE ENTERPRISES Bill",
         text:"Please find attached bill PDF."
       }).then(()=>{
-        $("status").textContent = "PDF share ho gayi.";
+        $("status").textContent="PDF share ho gayi.";
       }).catch(error=>{
         if(error.name==="AbortError"){
-          $("status").textContent = "Sharing cancel kar di gayi.";
+          $("status").textContent="Sharing cancel kar di gayi.";
         }else{
           console.error(error);
           doc.save(fileName);
-          $("status").textContent =
-            "PDF download ho gayi. WhatsApp mein Document se attach karein.";
+          $("status").textContent="PDF download ho gayi. WhatsApp mein Document se attach karein.";
         }
       });
-
     }else{
       doc.save(fileName);
-
-      $("status").textContent =
-        "PDF download ho gayi. WhatsApp mein Document se attach karein.";
+      $("status").textContent="PDF download ho gayi. WhatsApp mein Document se attach karein.";
     }
-
   }catch(error){
     console.error(error);
-
-    $("status").textContent =
-      "PDF share nahi ho payi. Save PDF button se PDF download karein.";
+    $("status").textContent="PDF share nahi ho payi. Save PDF button se PDF download karein.";
   }
 }
 
-/* NEW BILL */
-
 function newBill(){
-  currentBillId = null;
-
-  $("billNo").value = makeBillNo();
-  $("billDate").value = today();
-  $("customerName").value = "";
-  $("customerPhone").value = "";
-  $("customerAddress").value = "";
-
-  $("gstMode").value = "OFF";
-  $("gstRate").value = "18";
-  $("customGst").value = "0";
-  $("advancePaid").value = "0";
-
-  $("itemsBody").innerHTML = "";
+  currentBillId=null;
+  $("billNo").value=makeBillNo();
+  $("billDate").value=today();
+  $("customerName").value="";
+  $("customerPhone").value="";
+  $("customerAddress").value="";
+  $("gstMode").value="OFF";
+  $("gstRate").value="18";
+  $("customGst").value="0";
+  $("advancePaid").value="0";
+  $("itemsBody").innerHTML="";
   addRow();
   addRow();
-
   calculate();
-  $("status").textContent = "New bill ready.";
+  $("status").textContent="New bill ready.";
 }
 
 /* BUTTON EVENTS */
@@ -591,13 +463,12 @@ $("gstMode").addEventListener("change",calculate);
 $("gstRate").addEventListener("change",calculate);
 $("customGst").addEventListener("input",calculate);
 $("advancePaid").addEventListener("input",calculate);
-
 $("addRow").addEventListener("click",()=>addRow());
 $("saveBill").addEventListener("click",save);
 
 $("printBill").addEventListener("click",()=>{
-  const b = save();
-  if(!b) return;
+  const b=save();
+  if(!b)return;
   window.print();
 });
 
@@ -605,17 +476,12 @@ $("shareBill").addEventListener("click",share);
 $("newBill").addEventListener("click",newBill);
 $("refreshHistory").addEventListener("click",renderHistory);
 
-/* START APP */
+/* START */
 
 newBill();
 renderHistory();
-
-/* PDF LIBRARY PRELOAD */
-
 loadJsPDF().catch(()=>{});
 
-/* SERVICE WORKER */
-
-if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+if("serviceWorker" in navigator&&location.protocol.startsWith("http")){
   navigator.serviceWorker.register("./sw.js").catch(()=>{});
 }
