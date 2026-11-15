@@ -119,7 +119,29 @@ function save(){
   return b;
 }
 function renderHistory(){const list=getHistory();$("history").innerHTML=list.length?list.map(b=>`<div class="history-item"><div><b>${escapeHtml(b.billNo)}</b> · ${escapeHtml(b.customerName)}<small>${escapeHtml(b.billDate||"")} · ${money(b.total)}</small></div><button type="button" data-id="${escapeHtml(b.id)}">Open</button></div>`).join(""):"No saved bills yet."; $("history").querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>loadBill(btn.dataset.id)));}
-function loadBill(id){const b=getHistory().find(x=>x.id===id);if(!b)return;currentBillId=b.id;$("billNo").value=b.billNo;$("billDate").value=b.billDate;$("customerName").value=b.customerName;$("customerPhone").value=b.customerPhone;$("customerAddress").value=b.customerAddress;$("itemsBody").innerHTML="";(b.items||[]).forEach(addRow);if(!b.items?.length)addRow();calculate();$("status").textContent="Saved bill opened.";}
+function loadBill(id){
+  const b=getHistory().find(x=>x.id===id);
+  if(!b)return;
+
+  currentBillId=b.id;
+  $("billNo").value=b.billNo;
+  $("billDate").value=b.billDate;
+  $("customerName").value=b.customerName;
+  $("customerPhone").value=b.customerPhone;
+  $("customerAddress").value=b.customerAddress;
+
+  $("gstMode").value=b.gstMode || "OFF";
+  $("gstRate").value=[5,12,18,28].includes(Number(b.gstRate)) ? String(b.gstRate) : (b.gstMode==="ON" ? "CUSTOM" : "18");
+  $("customGst").value=b.customGst || 0;
+  $("advancePaid").value=b.advancePaid || 0;
+
+  $("itemsBody").innerHTML="";
+  (b.items||[]).forEach(addRow);
+  if(!b.items?.length)addRow();
+
+  calculate();
+  $("status").textContent="Saved bill opened.";
+}
 function newBill(){currentBillId=null;$("billNo").value=makeBillNo();$("billDate").value=today();$("customerName").value="";$("customerPhone").value="";$("customerAddress").value="";$("itemsBody").innerHTML="";addRow();addRow();$("status").textContent="New bill ready.";}
 
 
