@@ -51,14 +51,59 @@ function addRow(item={}){
   tr.querySelector(".remove").addEventListener("click",()=>{tr.remove();renumber();calculate();});
   calculate();
 }
-$("balanceDue").textContent = money(bill.balanceDue);
-$("subTotal").textContent = money(subtotal);
+
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function renumber(){[...$("itemsBody").children].forEach((tr,i)=>tr.querySelector(".serial").textContent=i+1);}
 function rows(){return [...$("itemsBody").children].map(tr=>({name:tr.querySelector(".material").value.trim(),qty:Number(tr.querySelector(".qty").value)||0,unit:tr.querySelector(".unit").value==="CUSTOM"?tr.querySelector(".custom-unit").value.trim():tr.querySelector(".unit").value,rate:Number(tr.querySelector(".rate").value)||0}));}
-function calculate(){let total=0;[...$("itemsBody").children].forEach(tr=>{const a=(Number(tr.querySelector(".qty").value)||0)*(Number(tr.querySelector(".rate").value)||0);tr.querySelector(".amount").textContent=money(a);total+=a;});$("grandTotal").textContent=money(total);}
+function getBillCalculation(subtotal){
+  const gstMode = $("gstMode").value;
+  const gstRateValue = $("gstRate").value;
+  const customGst = Number($("customGst").value) || 0;
+  const gstRate = gstRateValue === "CUSTOM" ? customGst : Number(gstRateValue);
+  const gstAmount = gstMode === "ON" ? subtotal * gstRate / 100 : 0;
+  const total = subtotal + gstAmount;
+  const advancePaid = Math.max(0, Number($("advancePaid").value) || 0);
+  const balanceDue = total - advancePaid;
+  return {gstMode, gstRate, customGst, gstAmount, total, advancePaid, balanceDue};
+}
 
-function collect(){const items=rows();return {id:currentBillId||String(Date.now()),billNo:$("billNo").value,billDate:$("billDate").value,customerName:$("customerName").value.trim(),customerPhone:$("customerPhone").value.trim(),customerAddress:$("customerAddress").value.trim(),items,total:items.reduce((s,x)=>s+x.qty*x.rate,0),savedAt:new Date().toISOString()};}
+function calculate(){
+  let subtotal = 0;
+  [...$("itemsBody").children].forEach(tr => {
+    const amount =
+      (Number(tr.querySelector(".qty").value) || 0) *
+      (Number(tr.querySelector(".rate").value) || 0);
+    tr.querySelector(".amount").textContent = money(amount);
+    subtotal += amount;
+  });
+
+  const bill = getBillCalculation(subtotal);
+  $("subTotal").textContent = money(subtotal);
+  $("gstAmount").textContent = money(bill.gstAmount);
+  $("grandTotal").textContent = money(bill.total);
+  $("balanceDue").textContent = money(bill.balanceDue);
+  $("customGstWrap").style.display =
+    $("gstRate").value === "CUSTOM" ? "block" : "none";
+}
+
+function collect(){
+  const items = rows();
+  const subtotal = items.reduce((s, x) => s + x.qty * x.rate, 0);
+  const calculation = getBillCalculation(subtotal);
+
+  return {
+    id: currentBillId || String(Date.now()),
+    billNo: $("billNo").value,
+    billDate: $("billDate").value,
+    customerName: $("customerName").value.trim(),
+    customerPhone: $("customerPhone").value.trim(),
+    customerAddress: $("customerAddress").value.trim(),
+    items,
+    subtotal,
+    ...calculation,
+    savedAt: new Date().toISOString()
+  };
+}
 function getHistory(){try{return JSON.parse(localStorage.getItem("daryaeeBills")||"[]");}catch{return [];}}
 function save(){
   const b=collect();
