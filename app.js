@@ -51,11 +51,13 @@ function addRow(item={}){
   tr.querySelector(".remove").addEventListener("click",()=>{tr.remove();renumber();calculate();});
   calculate();
 }
-
+$("balanceDue").textContent = money(bill.balanceDue);
+$("subTotal").textContent = money(subtotal);
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function renumber(){[...$("itemsBody").children].forEach((tr,i)=>tr.querySelector(".serial").textContent=i+1);}
 function rows(){return [...$("itemsBody").children].map(tr=>({name:tr.querySelector(".material").value.trim(),qty:Number(tr.querySelector(".qty").value)||0,unit:tr.querySelector(".unit").value==="CUSTOM"?tr.querySelector(".custom-unit").value.trim():tr.querySelector(".unit").value,rate:Number(tr.querySelector(".rate").value)||0}));}
 function calculate(){let total=0;[...$("itemsBody").children].forEach(tr=>{const a=(Number(tr.querySelector(".qty").value)||0)*(Number(tr.querySelector(".rate").value)||0);tr.querySelector(".amount").textContent=money(a);total+=a;});$("grandTotal").textContent=money(total);}
+
 function collect(){const items=rows();return {id:currentBillId||String(Date.now()),billNo:$("billNo").value,billDate:$("billDate").value,customerName:$("customerName").value.trim(),customerPhone:$("customerPhone").value.trim(),customerAddress:$("customerAddress").value.trim(),items,total:items.reduce((s,x)=>s+x.qty*x.rate,0),savedAt:new Date().toISOString()};}
 function getHistory(){try{return JSON.parse(localStorage.getItem("daryaeeBills")||"[]");}catch{return [];}}
 function save(){
