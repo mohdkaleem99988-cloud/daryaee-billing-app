@@ -142,8 +142,25 @@ function loadBill(id){
   calculate();
   $("status").textContent="Saved bill opened.";
 }
-function newBill(){currentBillId=null;$("billNo").value=makeBillNo();$("billDate").value=today();$("customerName").value="";$("customerPhone").value="";$("customerAddress").value="";$("itemsBody").innerHTML="";addRow();addRow();$("status").textContent="New bill ready.";}
+function newBill(){
+  currentBillId=null;
+  $("billNo").value=makeBillNo();
+  $("billDate").value=today();
+  $("customerName").value="";
+  $("customerPhone").value="";
+  $("customerAddress").value="";
 
+  $("gstMode").value="OFF";
+  $("gstRate").value="18";
+  $("customGst").value="0";
+  $("advancePaid").value="0";
+
+  $("itemsBody").innerHTML="";
+  addRow();
+  addRow();
+  calculate();
+  $("status").textContent="New bill ready.";
+}
 
 async function share(){
   const b = save();
