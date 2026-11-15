@@ -75,7 +75,6 @@ function renderHistory(){const list=getHistory();$("history").innerHTML=list.len
 function loadBill(id){const b=getHistory().find(x=>x.id===id);if(!b)return;currentBillId=b.id;$("billNo").value=b.billNo;$("billDate").value=b.billDate;$("customerName").value=b.customerName;$("customerPhone").value=b.customerPhone;$("customerAddress").value=b.customerAddress;$("itemsBody").innerHTML="";(b.items||[]).forEach(addRow);if(!b.items?.length)addRow();calculate();$("status").textContent="Saved bill opened.";}
 function newBill(){currentBillId=null;$("billNo").value=makeBillNo();$("billDate").value=today();$("customerName").value="";$("customerPhone").value="";$("customerAddress").value="";$("itemsBody").innerHTML="";addRow();addRow();$("status").textContent="New bill ready.";}
 
-async function share(){
 
 async function share(){
   const b = save();
@@ -278,4 +277,13 @@ async function share(){
     }
   }
 }
-  
+  $("shareBill").addEventListener("click", share);
+$("addRow").addEventListener("click",()=>addRow());
+$("saveBill").addEventListener("click",save);
+$("printBill").addEventListener("click",()=>{save();window.print();});
+$("newBill").addEventListener("click",newBill);
+$("refreshHistory").addEventListener("click",renderHistory);
+
+refreshMaterialSuggestions();
+newBill();
+renderHistory();
