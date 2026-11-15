@@ -127,7 +127,7 @@ async function share(){
     doc.text(String(item.qty),105,y);
     doc.text(String(item.unit),125,y);
     doc.text("INR " + Number(item.qty*item.rate||0).toFixed(2),175,y,{align:"right"});
-    doc.text(money(item.qty*item.rate),175,y,{align:"right"});
+    
  y += 8; });
   y += 5;
   doc.line(14,y,pageWidth-14,y);
