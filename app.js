@@ -3,9 +3,12 @@ const $ = id => document.getElementById(id);
 
 const units = ["MTR","FIT","NO","PCS","SET","KG","BOX","ROLL"];
 let currentBillId = null;
+let pdfLibraryPromise = null;
 
 function today(){
-  return new Date().toISOString().slice(0,10);
+  const d = new Date();
+  const local = new Date(d.getTime()-d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
 }
 
 function makeBillNo(){
@@ -243,215 +246,270 @@ function loadBill(id){
 /* PDF LIBRARY LOAD */
 
 function loadJsPDF(){
-  if(window.jspdf) return Promise.resolve(window.jspdf);
+  if(window.jspdf){
+    return Promise.resolve(window.jspdf);
+  }
 
-  return new Promise((resolve,reject)=>{
+  if(pdfLibraryPromise){
+    return pdfLibraryPromise;
+  }
+
+  pdfLibraryPromise = new Promise((resolve,reject)=>{
     const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js";
+
+    script.src =
+      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js";
 
     script.onload = ()=>{
-      if(window.jspdf) resolve(window.jspdf);
-      else reject(new Error("PDF library load nahi hui"));
+      if(window.jspdf){
+        resolve(window.jspdf);
+      }else{
+        pdfLibraryPromise = null;
+        reject(new Error("PDF library load nahi hui"));
+      }
     };
 
-    script.onerror = ()=>reject(new Error("PDF library load nahi hui"));
+    script.onerror = ()=>{
+      pdfLibraryPromise = null;
+      script.remove();
+      reject(new Error("Internet connection check karein"));
+    };
 
     document.head.appendChild(script);
   });
+
+  return pdfLibraryPromise;
+}
+
+/* CREATE BILL PDF */
+
+function createBillPDF(b){
+  const jsPDF = window.jspdf;
+
+  if(!jsPDF){
+    throw new Error("PDF library available nahi hai");
+  }
+
+  const doc = new jsPDF.jsPDF({
+    orientation:"portrait",
+    unit:"mm",
+    format:"a4"
+  });
+
+  const left = 14;
+  const right = 196;
+  let y = 18;
+
+  function checkPage(height=10){
+    if(y + height > 275){
+      doc.addPage();
+      y = 20;
+    }
+  }
+
+  function addText(text,x,yValue,options={}){
+    doc.text(String(text ?? "-"),x,yValue,options);
+  }
+
+  /* BUSINESS HEADER */
+
+  doc.setTextColor(8,42,75);
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(19);
+  addText("DARYAEE ENTERPRISES",left,y);
+
+  y += 8;
+  doc.setFontSize(11);
+  addText("ELECTRICAL CONTRACTOR",left,y);
+
+  y += 7;
+  doc.setTextColor(60,60,60);
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(9);
+  addText("Primary: 8795322256  |  Secondary: 9696566701",left,y);
+
+  y += 5;
+  doc.setDrawColor(190,150,65);
+  doc.setLineWidth(0.8);
+  doc.line(left,y,right,y);
+
+  y += 10;
+
+  /* BILL DETAILS */
+
+  doc.setTextColor(8,42,75);
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(14);
+  addText("BILL",left,y);
+
+  y += 9;
+  doc.setTextColor(40,40,40);
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10);
+
+  addText("Bill Number: " + b.billNo,left,y);
+  y += 6;
+  addText("Bill Date: " + b.billDate,left,y);
+  y += 6;
+  addText("Customer: " + b.customerName,left,y);
+  y += 6;
+  addText("Mobile: " + (b.customerPhone||"-"),left,y);
+  y += 6;
+
+  const addressLines = doc.splitTextToSize(
+    "Address: " + (b.customerAddress||"-"),180
+  );
+
+  doc.text(addressLines,left,y);
+  y += addressLines.length*5 + 6;
+
+  /* MATERIAL TABLE */
+
+  const xNo = 14;
+  const xMaterial = 27;
+  const xQty = 112;
+  const xUnit = 130;
+  const xRate = 151;
+  const xAmount = 194;
+
+  doc.setFillColor(8,42,75);
+  doc.rect(left,y-5,182,9,"F");
+
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(8);
+
+  addText("S.No",xNo,y);
+  addText("Material",xMaterial,y);
+  addText("Qty",xQty,y);
+  addText("Unit",xUnit,y);
+  addText("Rate",xRate,y);
+  addText("Amount",xAmount,y,{align:"right"});
+
+  y += 9;
+
+  doc.setTextColor(40,40,40);
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(8);
+
+  (b.items||[]).forEach((item,index)=>{
+    const materialLines = doc.splitTextToSize(
+      String(item.name||"-"),78
+    );
+
+    const rowHeight = Math.max(7,materialLines.length*4.5);
+
+    checkPage(rowHeight+5);
+
+    addText(String(index+1),xNo,y);
+    doc.text(materialLines,xMaterial,y);
+    addText(String(item.qty||0),xQty,y);
+    addText(String(item.unit||"-"),xUnit,y);
+    addText(Number(item.rate||0).toFixed(2),xRate,y);
+
+    addText(
+      (Number(item.qty||0)*Number(item.rate||0)).toFixed(2),
+      xAmount,y,{align:"right"}
+    );
+
+    y += rowHeight;
+
+    doc.setDrawColor(220,220,220);
+    doc.setLineWidth(0.2);
+    doc.line(left,y-2,right,y-2);
+
+    y += 3;
+  });
+
+  /* TOTALS */
+
+  y += 5;
+  checkPage(55);
+
+  const subtotal = Number(b.subtotal||0);
+  const gstAmount = Number(b.gstAmount||0);
+  const grandTotal = Number(b.total||0);
+  const advance = Number(b.advancePaid||0);
+  const balance = Number(b.balanceDue||0);
+
+  doc.setTextColor(50,50,50);
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10);
+
+  addText("Subtotal: INR " + subtotal.toFixed(2),right,y,{align:"right"});
+  y += 7;
+
+  addText(
+    "GST ("+(b.gstMode==="ON"?b.gstRate+"%":"OFF")+
+    "): INR "+gstAmount.toFixed(2),
+    right,y,{align:"right"}
+  );
+
+  y += 9;
+
+  doc.setFillColor(8,42,75);
+  doc.rect(105,y-6,91,11,"F");
+
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(11);
+
+  addText(
+    "GRAND TOTAL: INR "+grandTotal.toFixed(2),
+    193,y+1,{align:"right"}
+  );
+
+  y += 13;
+
+  doc.setTextColor(50,50,50);
+  doc.setFontSize(10);
+
+  addText("Advance Paid: INR "+advance.toFixed(2),right,y,{align:"right"});
+  y += 7;
+
+  doc.setFont("helvetica","bold");
+  addText("Balance Due: INR "+balance.toFixed(2),right,y,{align:"right"});
+
+  y += 18;
+  checkPage(10);
+
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(9);
+  doc.setTextColor(100,100,100);
+  addText("Thank you for your business!",left,y);
+
+  return doc;
 }
 
 /* WHATSAPP PDF SHARE */
 
-async function share(){
+function share(){
   const b = save();
   if(!b) return;
+
+  /* Library ready nahi hai to pehle load karein */
+
+  if(!window.jspdf){
+    $("status").textContent =
+      "PDF library load ho rahi hai. Thodi der baad Share dobara dabayein.";
+
+    loadJsPDF()
+      .then(()=>{
+        $("status").textContent =
+          "PDF ready hai. Ab WhatsApp Share dobara dabayein.";
+      })
+      .catch(()=>{
+        $("status").textContent =
+          "Internet slow hai. Internet check karke dobara try karein.";
+      });
+
+    return;
+  }
 
   try{
     $("status").textContent = "PDF ban rahi hai...";
 
-    const jsPDF = await loadJsPDF();
-    const doc = new jsPDF.jsPDF({
-      orientation:"portrait",
-      unit:"mm",
-      format:"a4"
-    });
-
-    const left = 14;
-    const right = 196;
-    let y = 18;
-
-    function checkPage(height=10){
-      if(y + height > 275){
-        doc.addPage();
-        y = 20;
-      }
-    }
-
-    function addText(text,x,yValue,options={}){
-      doc.text(String(text ?? "-"),x,yValue,options);
-    }
-
-    /* BUSINESS HEADER */
-
-    doc.setTextColor(8,42,75);
-    doc.setFont("helvetica","bold");
-    doc.setFontSize(19);
-    addText("DARYAEE ENTERPRISES",left,y);
-
-    y += 8;
-    doc.setFontSize(11);
-    addText("ELECTRICAL CONTRACTOR",left,y);
-
-    y += 7;
-    doc.setTextColor(60,60,60);
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(9);
-    addText("Primary: 8795322256  |  Secondary: 9696566701",left,y);
-
-    y += 5;
-    doc.setDrawColor(190,150,65);
-    doc.setLineWidth(0.8);
-    doc.line(left,y,right,y);
-
-    y += 10;
-
-    /* BILL DETAILS */
-
-    doc.setTextColor(8,42,75);
-    doc.setFont("helvetica","bold");
-    doc.setFontSize(14);
-    addText("BILL",left,y);
-
-    y += 9;
-    doc.setTextColor(40,40,40);
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(10);
-
-    addText("Bill Number: " + b.billNo,left,y);
-    y += 6;
-    addText("Bill Date: " + b.billDate,left,y);
-    y += 6;
-    addText("Customer: " + b.customerName,left,y);
-    y += 6;
-    addText("Mobile: " + (b.customerPhone||"-"),left,y);
-    y += 6;
-
-    const addressLines = doc.splitTextToSize(
-      "Address: " + (b.customerAddress||"-"),180
-    );
-    doc.text(addressLines,left,y);
-    y += addressLines.length*5 + 6;
-
-    /* MATERIAL TABLE */
-
-    const xNo = 14;
-    const xMaterial = 27;
-    const xQty = 112;
-    const xUnit = 130;
-    const xRate = 151;
-    const xAmount = 194;
-
-    doc.setFillColor(8,42,75);
-    doc.rect(left,y-5,182,9,"F");
-
-    doc.setTextColor(255,255,255);
-    doc.setFont("helvetica","bold");
-    doc.setFontSize(8);
-
-    addText("S.No",xNo,y);
-    addText("Material",xMaterial,y);
-    addText("Qty",xQty,y);
-    addText("Unit",xUnit,y);
-    addText("Rate",xRate,y);
-    addText("Amount",xAmount,y,{align:"right"});
-
-    y += 9;
-
-    doc.setTextColor(40,40,40);
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(8);
-
-    (b.items||[]).forEach((item,index)=>{
-      const materialLines = doc.splitTextToSize(
-        String(item.name||"-"),78
-      );
-      const rowHeight = Math.max(7,materialLines.length*4.5);
-
-      checkPage(rowHeight+5);
-
-      addText(String(index+1),xNo,y);
-      doc.text(materialLines,xMaterial,y);
-      addText(String(item.qty||0),xQty,y);
-      addText(String(item.unit||"-"),xUnit,y);
-      addText(Number(item.rate||0).toFixed(2),xRate,y);
-      addText(
-        (Number(item.qty||0)*Number(item.rate||0)).toFixed(2),
-        xAmount,y,{align:"right"}
-      );
-
-      y += rowHeight;
-      doc.setDrawColor(220,220,220);
-      doc.setLineWidth(0.2);
-      doc.line(left,y-2,right,y-2);
-      y += 3;
-    });
-
-    /* TOTALS */
-
-    y += 5;
-    checkPage(55);
-
-    const subtotal = Number(b.subtotal||0);
-    const gstAmount = Number(b.gstAmount||0);
-    const grandTotal = Number(b.total||0);
-    const advance = Number(b.advancePaid||0);
-    const balance = Number(b.balanceDue||0);
-
-    doc.setTextColor(50,50,50);
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(10);
-
-    addText("Subtotal: INR " + subtotal.toFixed(2),right,y,{align:"right"});
-    y += 7;
-
-    addText(
-      "GST ("+(b.gstMode==="ON"?b.gstRate+"%":"OFF")+
-      "): INR "+gstAmount.toFixed(2),
-      right,y,{align:"right"}
-    );
-    y += 9;
-
-    doc.setFillColor(8,42,75);
-    doc.rect(105,y-6,91,11,"F");
-
-    doc.setTextColor(255,255,255);
-    doc.setFont("helvetica","bold");
-    doc.setFontSize(11);
-    addText(
-      "GRAND TOTAL: INR "+grandTotal.toFixed(2),
-      193,y+1,{align:"right"}
-    );
-
-    y += 13;
-    doc.setTextColor(50,50,50);
-    doc.setFontSize(10);
-
-    addText("Advance Paid: INR "+advance.toFixed(2),right,y,{align:"right"});
-    y += 7;
-
-    doc.setFont("helvetica","bold");
-    addText("Balance Due: INR "+balance.toFixed(2),right,y,{align:"right"});
-
-    y += 18;
-    checkPage(10);
-
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100,100,100);
-    addText("Thank you for your business!",left,y);
-
-    /* CREATE PDF FILE */
-
+    const doc = createBillPDF(b);
     const blob = doc.output("blob");
     const fileName = (b.billNo||"DARYAEE-Bill")+".pdf";
 
@@ -459,37 +517,47 @@ async function share(){
       type:"application/pdf"
     });
 
-    /* SHARE PDF USING ANDROID SHARE MENU */
+    /* ANDROID / CHROME FILE SHARE */
 
     if(
       navigator.share &&
       navigator.canShare &&
       navigator.canShare({files:[file]})
     ){
-      $("status").textContent = "WhatsApp share menu khul raha hai...";
+      $("status").textContent =
+        "Share menu khul raha hai. WhatsApp chunein.";
 
-      await navigator.share({
+      /* Important: share ko bina await ke direct call karein */
+
+      navigator.share({
         files:[file],
         title:"DARYAEE ENTERPRISES Bill",
         text:"Please find attached bill PDF."
+      }).then(()=>{
+        $("status").textContent = "PDF share ho gayi.";
+      }).catch(error=>{
+        if(error.name==="AbortError"){
+          $("status").textContent = "Sharing cancel kar di gayi.";
+        }else{
+          console.error(error);
+          doc.save(fileName);
+          $("status").textContent =
+            "PDF download ho gayi. WhatsApp mein Document se attach karein.";
+        }
       });
 
-      $("status").textContent = "PDF share menu open ho gaya.";
     }else{
       doc.save(fileName);
+
       $("status").textContent =
-        "PDF download ho gayi. WhatsApp mein Document se PDF attach karein.";
+        "PDF download ho gayi. WhatsApp mein Document se attach karein.";
     }
 
   }catch(error){
-    if(error.name==="AbortError"){
-      $("status").textContent = "PDF sharing cancel kar di gayi.";
-      return;
-    }
-
     console.error(error);
+
     $("status").textContent =
-      "PDF share nahi ho payi. Internet check karke dobara try karein.";
+      "PDF share nahi ho payi. Save PDF button se PDF download karein.";
   }
 }
 
@@ -542,6 +610,12 @@ $("refreshHistory").addEventListener("click",renderHistory);
 newBill();
 renderHistory();
 
+/* PDF LIBRARY PRELOAD */
+
+loadJsPDF().catch(()=>{});
+
+/* SERVICE WORKER */
+
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   navigator.serviceWorker.register("./sw.js").catch(()=>{});
-  }
+}
