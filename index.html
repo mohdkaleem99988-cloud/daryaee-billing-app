@@ -1,143 +1,171 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#082b4c">
-  <meta name="description" content="DARYAEE ENTERPRISES Electrical Contractor Billing">
-  <title>DARYAEE ENTERPRISES | Professional Billing</title>
+  <title>DARYAEE ENTERPRISES - Billing System</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header class="top">
-  <div class="brand-mark">DE</div>
-  <div class="brand-info">
-    <h1>DARYAEE ENTERPRISES</h1>
-    <p class="subtitle">ELECTRICAL CONTRACTOR</p>
-    <p class="contact">
-      Primary: 8795322256
-      <span>|</span>
-      Secondary: 9696566701
-    </p>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" width="58" height="58" aria-label="DE Electrical logo">
+        <rect x="3" y="3" width="94" height="94" rx="22" fill="#082b4c" stroke="#c9a653" stroke-width="4"/>
+        <path d="M55 10 L29 54 H47 L39 88 L73 42 H53 L65 10 Z" fill="#c9a653"/>
+        <text x="50" y="68" text-anchor="middle" font-size="15" font-weight="bold" fill="white">DE</text>
+      </svg>
+    </div>
+    <div class="brand-info">
+      <h1 id="brandName">DARYAEE ENTERPRISES</h1>
+      <p id="brandTagline">ELECTRICAL CONTRACTOR</p>
+      <p>Primary: <span id="primaryPhoneDisplay">8795322256</span> | Secondary: <span id="secondaryPhoneDisplay">9696566701</span></p>
+      <p id="businessEmailDisplay">mohdkaleem99988@gmail.com</p>
+    </div>
   </div>
-  <div class="header-label">BILLING SYSTEM</div>
+  <div class="header-actions">
+    <span class="header-label">BILLING SYSTEM</span>
+    <button type="button" id="settingsBtn" class="settings-btn">⚙ Settings</button>
+  </div>
 </header>
 
-<main>
+<main class="container">
 
-  <section class="panel">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">BILL INFORMATION</span>
-        <h2>Customer Details</h2>
-      </div>
-      <span class="tag">NEW BILL</span>
+  <section id="settingsPanel" class="panel settings-panel" hidden>
+    <div class="section-heading">
+      <h2>⚙ Business Settings</h2>
+      <button type="button" id="closeSettings" class="secondary-btn">Close ✕</button>
     </div>
 
     <div class="form-grid">
-      <label>
-        Bill Number
-        <input id="billNo" readonly>
+      <label>Business Name
+        <input type="text" id="businessNameSetting" value="DARYAEE ENTERPRISES">
       </label>
-
-      <label>
-        Bill Date
-        <input id="billDate" type="date">
+      <label>Business Tagline
+        <input type="text" id="businessTaglineSetting" value="ELECTRICAL CONTRACTOR">
       </label>
-
-      <label>
-        Customer Name
-        <input id="customerName" placeholder="Enter customer name">
+      <label>Primary Phone
+        <input type="tel" id="primaryPhoneSetting" value="8795322256">
       </label>
-
-      <label>
-        Mobile Number
-        <input id="customerPhone" inputmode="tel" placeholder="Enter mobile number">
+      <label>Secondary Phone
+        <input type="tel" id="secondaryPhoneSetting" value="9696566701">
       </label>
+      <label>Email Address
+        <input type="email" id="businessEmailSetting" value="mohdkaleem99988@gmail.com">
+      </label>
+      <label>Default GST
+        <select id="defaultGstModeSetting">
+          <option value="OFF">GST OFF</option>
+          <option value="ON">GST ON</option>
+        </select>
+      </label>
+      <label>Default GST Rate
+        <select id="defaultGstRateSetting">
+          <option value="5">5%</option>
+          <option value="12">12%</option>
+          <option value="18">18%</option>
+          <option value="28">28%</option>
+        </select>
+      </label>
+    </div>
+    <button type="button" id="saveSettings" class="primary-btn">Save Settings</button>
+  </section>
 
-      <label class="wide">
-        Customer Address
-        <textarea id="customerAddress" rows="2" placeholder="Enter customer address"></textarea>
+  <section class="panel">
+    <div class="section-heading">
+      <h2>BILL INFORMATION</h2>
+      <span class="section-tag">NEW BILL</span>
+    </div>
+
+    <div class="form-grid">
+      <label>Bill Number
+        <input type="text" id="billNo" readonly>
+      </label>
+      <label>Bill Date
+        <input type="date" id="billDate">
+      </label>
+      <label>Customer Name
+        <input type="text" id="customerName" placeholder="Enter customer name">
+      </label>
+      <label>Mobile Number
+        <input type="tel" id="customerPhone" placeholder="Enter mobile number">
+      </label>
+      <label class="full-width">Customer Address
+        <textarea id="customerAddress" placeholder="Enter customer address"></textarea>
       </label>
     </div>
   </section>
 
   <section class="panel">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">ITEMS & SERVICES</span>
-        <h2>Material Details</h2>
-      </div>
-      <button id="addRow" class="small-btn" type="button">+ Add Item</button>
+    <div class="section-heading">
+      <h2>ITEMS & SERVICES</h2>
+      <button type="button" id="addRow" class="secondary-btn">+ Add Item</button>
     </div>
 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>S.No.</th>
-            <th>Material Name</th>
-            <th>Quantity</th>
+            <th>Sr.</th>
+            <th>Material / Description</th>
+            <th>Qty</th>
             <th>Unit</th>
             <th>Rate (₹)</th>
-            <th>Total Amount (₹)</th>
-            <th class="no-print">Remove</th>
+            <th>Amount (₹)</th>
+            <th>Remove</th>
           </tr>
         </thead>
         <tbody id="itemsBody"></tbody>
       </table>
     </div>
+  </section>
 
-    <div class="bill-summary">
-      <div class="summary-heading">BILL SUMMARY</div>
+  <section class="panel">
+    <div class="section-heading">
+      <h2>BILL SUMMARY</h2>
+    </div>
 
+    <div class="summary-grid">
       <div class="summary-row">
-        <span>Subtotal</span>
+        <span>Sub Total</span>
         <strong id="subTotal">₹0.00</strong>
       </div>
-
       <div class="summary-row">
         <label for="gstMode">GST</label>
         <select id="gstMode">
-          <option value="OFF">GST OFF</option>
-          <option value="ON">GST ON</option>
+          <option value="OFF">OFF</option>
+          <option value="ON">ON</option>
         </select>
       </div>
-
       <div class="summary-row">
         <label for="gstRate">GST Rate</label>
         <select id="gstRate">
           <option value="5">5%</option>
           <option value="12">12%</option>
-          <option value="18" selected>18%</option>
+          <option value="18">18%</option>
           <option value="28">28%</option>
           <option value="CUSTOM">Custom</option>
         </select>
       </div>
-
-      <div id="customGstWrap" class="custom-gst" style="display:none">
+      <div class="summary-row" id="customGstWrap" hidden>
         <label for="customGst">Custom GST %</label>
-        <input id="customGst" type="number" value="0">
+        <input type="number" id="customGst" min="0" max="100" value="0">
       </div>
-
       <div class="summary-row">
         <span>GST Amount</span>
         <strong id="gstAmount">₹0.00</strong>
       </div>
-
-      <div class="summary-row grand-row">
+      <div class="summary-row grand-total">
         <span>Grand Total</span>
         <strong id="grandTotal">₹0.00</strong>
       </div>
-
       <div class="summary-row">
         <label for="advancePaid">Advance Paid (₹)</label>
-        <input id="advancePaid" type="number" value="0">
+        <input type="number" id="advancePaid" min="0" value="0">
       </div>
-
       <div class="summary-row balance-row">
         <span>Balance Due</span>
         <strong id="balanceDue">₹0.00</strong>
@@ -145,39 +173,34 @@
     </div>
   </section>
 
-  <section class="panel actions">
-    <div class="action-heading">
-      <span class="eyebrow">BILL MANAGEMENT</span>
-      <h2>Bill Actions</h2>
+  <section class="panel">
+    <div class="section-heading">
+      <h2>BILL MANAGEMENT</h2>
     </div>
-
-    <div class="action-buttons">
-      <button id="saveBill" type="button">Save Bill</button>
-      <button id="printBill" class="secondary" type="button">Print / Save PDF</button>
-      <button id="shareBill" class="whatsapp" type="button">Share on WhatsApp</button>
-      <button id="newBill" class="light" type="button">+ New Bill</button>
+    <div class="action-grid">
+      <button type="button" id="saveBill" class="primary-btn">Save Bill</button>
+      <button type="button" id="printBill" class="primary-btn">Print / Save PDF</button>
+      <button type="button" id="shareBill" class="whatsapp-btn">Share on WhatsApp</button>
+      <button type="button" id="newBill" class="secondary-btn">+ New Bill</button>
     </div>
-
-    <p id="status" role="status"></p>
+    <p id="status" class="status"></p>
   </section>
 
   <section class="panel">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">YOUR RECORDS</span>
-        <h2>Saved Bills</h2>
-      </div>
-      <button id="refreshHistory" class="small-btn secondary" type="button">Refresh</button>
+    <div class="section-heading">
+      <h2>SAVED BILLS</h2>
+      <button type="button" id="refreshHistory" class="secondary-btn">Refresh</button>
     </div>
-
-    <div id="history" class="history">No saved bills yet.</div>
+    <div id="history"></div>
   </section>
 
 </main>
 
-<footer>
-  <strong>DARYAEE ENTERPRISES</strong>
-  <span>Thank you for your business</span>
+<footer class="footer">
+  <strong id="footerBusinessName">DARYAEE ENTERPRISES</strong>
+  <p>Electrical Contractor</p>
+  <p>8795322256 | 9696566701</p>
+  <a href="mailto:mohdkaleem99988@gmail.com">mohdkaleem99988@gmail.com</a>
 </footer>
 
 <script src="app.js"></script>
