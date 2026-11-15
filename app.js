@@ -312,18 +312,40 @@ async function share(){
     y = 60;
   }
 
-  doc.setFillColor(...navy);
-  doc.roundedRect(105,y,right-105,19,2,2,"F");
-  doc.setTextColor(255,255,255);
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(11);
-  doc.text("GRAND TOTAL",110,y+12);
-  doc.setTextColor(255,255,255);
-  doc.text(
-    "INR " + Number(b.total||0).toFixed(2),
-    right-4,y+12,{align:"right"}
-  );
+  
+  const summaryRows = [
+    ["Subtotal", b.subtotal],
+    [`GST (${b.gstMode === "ON" ? b.gstRate + "%" : "OFF"})`, b.gstAmount],
+    ["Grand Total", b.total],
+    ["Advance Paid", b.advancePaid],
+    ["Total Balance", b.balanceDue]
+  ];
 
+  summaryRows.forEach((item, index) => {
+    if (y > H - 48) {
+      doc.addPage();
+      header();
+      y = 60;
+    }
+
+    if (index === 2 || index === 4) {
+      doc.setFillColor(...navy);
+      doc.roundedRect(105, y - 5, right - 105, 10, 2, 2, "F");
+      doc.setTextColor(255,255,255);
+      doc.setFont("helvetica","bold");
+    } else {
+      doc.setTextColor(35,50,65);
+      doc.setFont("helvetica","normal");
+    }
+
+    doc.setFontSize(9);
+    doc.text(item[0], 110, y + 1);
+    doc.text(
+      "INR " + Number(item[1] || 0).toFixed(2),
+      right - 4, y + 1, {align:"right"}
+    );
+    y += 11;
+  });
   y += 35;
   if(y > H-20){
     doc.addPage();
