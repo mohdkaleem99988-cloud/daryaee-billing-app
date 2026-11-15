@@ -126,16 +126,15 @@ async function share(){
     doc.text(String(item.name || "-").slice(0,35),28,y);
     doc.text(String(item.qty),105,y);
     doc.text(String(item.unit),125,y);
-    doc.text(money(item.rate),145,y);
+    doc.text("INR " + Number(item.rate||0).toFixed(2),145,y);
     doc.text(money(item.qty*item.rate),175,y,{align:"right"});
-    y += 8;
   });
   y += 5;
   doc.line(14,y,pageWidth-14,y);
   y += 10;
   doc.setFont("helvetica","bold");
   doc.setFontSize(13);
-  doc.text("GRAND TOTAL: " + money(b.total), pageWidth-14, y, {align:"right"});
+  doc.text("GRAND TOTAL: INR " + Number(b.total||0).toFixed(2), pageWidth-14, y, {align:"right"});
   const blob = doc.output("blob");
   const file = new File([blob], `${b.billNo}.pdf`, {type:"application/pdf"});
   try{
