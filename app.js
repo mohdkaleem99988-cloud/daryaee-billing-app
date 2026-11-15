@@ -131,3 +131,4 @@ async function share(){
     }
   }
 }
+$("shareBill").addEventListener("click", share);
