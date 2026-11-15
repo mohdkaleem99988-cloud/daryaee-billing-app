@@ -132,3 +132,11 @@ async function share(){
   }
 }
 $("shareBill").addEventListener("click", share);
+$("addRow").addEventListener("click",()=>addRow());
+$("saveBill").addEventListener("click",save);
+$("printBill").addEventListener("click",()=>{save();window.print();});
+$("newBill").addEventListener("click",newBill);
+$("refreshHistory").addEventListener("click",renderHistory);
+
+newBill();
+renderHistory();
