@@ -38,7 +38,58 @@
         <tbody id="itemsBody"></tbody>
       </table>
     </div>
-    <div class="grand-total"><span>Grand Total</span><strong id="grandTotal">₹0.00</strong></div>
+    
+<div class="bill-summary">
+  <div class="summary-row">
+    <span>Subtotal</span>
+    <strong id="subTotal">₹0.00</strong>
+  </div>
+
+  <div class="summary-row">
+    <label for="gstMode">GST</label>
+    <select id="gstMode">
+      <option value="OFF">GST OFF</option>
+      <option value="ON">GST ON</option>
+    </select>
+  </div>
+
+  <div class="summary-row">
+    <label for="gstRate">GST Rate</label>
+    <select id="gstRate">
+      <option value="5">5%</option>
+      <option value="12">12%</option>
+      <option value="18" selected>18%</option>
+      <option value="28">28%</option>
+      <option value="CUSTOM">Custom</option>
+    </select>
+  </div>
+
+  <div id="customGstWrap" style="display:none">
+    <label for="customGst">Custom GST %</label>
+    <input id="customGst" type="number" value="0">
+  </div>
+
+  <div class="summary-row">
+    <span>GST Amount</span>
+    <strong id="gstAmount">₹0.00</strong>
+  </div>
+
+  <div class="summary-row">
+    <span>Grand Total</span>
+    <strong id="grandTotal">₹0.00</strong>
+  </div>
+
+  <div class="summary-row">
+    <label for="advancePaid">Advance Paid (₹)</label>
+    <input id="advancePaid" type="number" value="0">
+  </div>
+
+  <div class="summary-row">
+    <span>Balance Due</span>
+    <strong id="balanceDue">₹0.00</strong>
+  </div>
+</div>
+    
   </section>
 
   <section class="panel actions">
