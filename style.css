@@ -63,3 +63,20 @@ th{background:#e8f1f8!important;print-color-adjust:exact}
 .top h1{font-size:18px}
 footer{padding:8px}
 }
+.summary-row,
+.grand-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.summary-row strong,
+.grand-total strong {
+  text-align: right;
+  margin-left: auto;
+}
+
+.grand-total {
+  text-align: left;
+}
