@@ -324,6 +324,10 @@ async function share(){
     }
   }
 }
+$("gstMode").addEventListener("change", calculate);
+$("gstRate").addEventListener("change", calculate);
+$("customGst").addEventListener("input", calculate);
+$("advancePaid").addEventListener("input", calculate);
 
   $("shareBill").addEventListener("click", share);
 $("addRow").addEventListener("click",()=>addRow());
