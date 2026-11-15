@@ -36,12 +36,98 @@ function save(){const b=collect();if(!b.customerName){$("status").textContent="P
 function renderHistory(){const list=getHistory();$("history").innerHTML=list.length?list.map(b=>`<div class="history-item"><div><b>${escapeHtml(b.billNo)}</b> · ${escapeHtml(b.customerName)}<small>${escapeHtml(b.billDate||"")} · ${money(b.total)}</small></div><button type="button" data-id="${escapeHtml(b.id)}">Open</button></div>`).join(""):"No saved bills yet."; $("history").querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>loadBill(btn.dataset.id)));}
 function loadBill(id){const b=getHistory().find(x=>x.id===id);if(!b)return;currentBillId=b.id;$("billNo").value=b.billNo;$("billDate").value=b.billDate;$("customerName").value=b.customerName;$("customerPhone").value=b.customerPhone;$("customerAddress").value=b.customerAddress;$("itemsBody").innerHTML="";(b.items||[]).forEach(addRow);if(!b.items?.length)addRow();calculate();$("status").textContent="Saved bill opened.";}
 function newBill(){currentBillId=null;$("billNo").value=makeBillNo();$("billDate").value=today();$("customerName").value="";$("customerPhone").value="";$("customerAddress").value="";$("itemsBody").innerHTML="";addRow();addRow();$("status").textContent="New bill ready.";}
-function share(){const b=save();if(!b)return;const lines=[ "DARYAEE ENTERPRISES","ELECTRICAL CONTRACTOR","Primary: 8795322256","Secondary: 9696566701",`Bill No: ${b.billNo}`,`Date: ${b.billDate}`,`Customer: ${b.customerName}`,`Mobile: ${b.customerPhone}`,`Address: ${b.customerAddress}`,"","S.No. | Material | Qty | Unit | Rate | Amount",...b.items.map((x,i)=>`${i+1} | ${x.name} | ${x.qty} | ${x.unit} | ${money(x.rate)} | ${money(x.qty*x.rate)}`),"",`GRAND TOTAL: ${money(b.total)}`];const url="https://wa.me/?text="+encodeURIComponent(lines.join("\n"));window.open(url,"_blank");}
-$("addRow").addEventListener("click",()=>addRow());
-$("saveBill").addEventListener("click",save);
-$("printBill").addEventListener("click",()=>{save();window.print();});
-$("shareBill").addEventListener("click",share);
-$("newBill").addEventListener("click",newBill);
-$("refreshHistory").addEventListener("click",renderHistory);
-newBill();renderHistory();
-if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+async function share(){
+  const b = save();
+  if(!b) return;
+
+  if(!window.jspdf){
+    $("status").textContent = "PDF library load nahi hui. Internet check karein.";
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 18;
+
+  doc.setFontSize(18);
+  doc.setFont("helvetica","bold");
+  doc.text("DARYAEE ENTERPRISES", pageWidth/2, y, {align:"center"});
+  y += 8;
+
+  doc.setFontSize(11);
+  doc.text("ELECTRICAL CONTRACTOR", pageWidth/2, y, {align:"center"});
+  y += 10;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica","normal");
+  doc.text("Primary: 8795322256  |  Secondary: 9696566701", pageWidth/2, y, {align:"center"});
+  y += 12;
+
+  doc.setFont("helvetica","bold");
+  doc.text("INVOICE", 14, y);
+  y += 8;
+
+  doc.setFont("helvetica","normal");
+  [
+    `Bill No: ${b.billNo}`,
+    `Date: ${b.billDate}`,
+    `Customer: ${b.customerName}`,
+    `Mobile: ${b.customerPhone || "-"}`,
+    `Address: ${b.customerAddress || "-"}`
+  ].forEach(line => {
+    doc.text(line, 14, y);
+    y += 7;
+  });
+
+  y += 5;
+  doc.setFont("helvetica","bold");
+  doc.text("S.No.",14,y);
+  doc.text("Material",28,y);
+  doc.text("Qty",105,y);
+  doc.text("Unit",125,y);
+  doc.text("Rate",145,y);
+  doc.text("Amount",175,y,{align:"right"});
+  y += 4;
+  doc.line(14,y,pageWidth-14,y);
+  y += 7;
+
+  doc.setFont("helvetica","normal");
+  b.items.forEach((item,i) => {
+    if(y > 270){ doc.addPage(); y=20; }
+    doc.text(String(i+1),14,y);
+    doc.text(String(item.name || "-").slice(0,35),28,y);
+    doc.text(String(item.qty),105,y);
+    doc.text(String(item.unit),125,y);
+    doc.text(money(item.rate),145,y);
+    doc.text(money(item.qty*item.rate),175,y,{align:"right"});
+    y += 8;
+  });
+
+  y += 5;
+  doc.line(14,y,pageWidth-14,y);
+  y += 10;
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(13);
+  doc.text("GRAND TOTAL: " + money(b.total), pageWidth-14, y, {align:"right"});
+
+  const blob = doc.output("blob");
+  const file = new File([blob], `${b.billNo}.pdf`, {type:"application/pdf"});
+
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({
+        files:[file],
+        title:b.billNo,
+        text:"DARYAEE ENTERPRISES - Bill PDF"
+      });
+    }else{
+      doc.save(`${b.billNo}.pdf`);
+      $("status").textContent = "PDF download ho gaya. Files se WhatsApp par bhejein.";
+    }
+  }catch(e){
+    if(e.name !== "AbortError"){
+      $("status").textContent = "PDF share nahi ho paya. Dobara try karein.";
+    }
+  }
+}
