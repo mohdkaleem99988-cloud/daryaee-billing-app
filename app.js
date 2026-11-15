@@ -277,6 +277,7 @@ async function share(){
     }
   }
 }
+
   $("shareBill").addEventListener("click", share);
 $("addRow").addEventListener("click",()=>addRow());
 $("saveBill").addEventListener("click",save);
